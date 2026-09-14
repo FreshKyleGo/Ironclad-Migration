@@ -187,58 +187,7 @@
     color: var(--ink-soft);
   }
 
-  /* ============ COMPLEXITY CARDS ============ */
-  .complexity-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .cx-card {
-    background: var(--paper-raised);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 20px 22px;
-  }
-
-  .cx-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 11.5px;
-    font-weight: 700;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  .cx-tag .sw { width: 9px; height: 9px; border-radius: 50%; }
-  .cx-tag .sw.green { background: var(--green); }
-  .cx-tag .sw.amber { background: var(--amber); }
-  .cx-tag .sw.red { background: var(--red); }
-
-  .cx-count {
-    font-size: 34px;
-    font-weight: 800;
-    line-height: 1;
-    color: var(--hf-dark-green);
-    margin-bottom: 4px;
-  }
-
-  .cx-pct {
-    font-size: 12px;
-    color: var(--ink-soft);
-    margin-bottom: 12px;
-  }
-
-  .cx-desc {
-    font-size: 12.5px;
-    color: var(--ink-soft);
-    line-height: 1.5;
-  }
-
+  /* ============ COMPLEXITY MIX LAYOUT ============ */
   .complexity-layout {
     display: grid;
     grid-template-columns: 280px 1fr;
@@ -287,10 +236,17 @@
 
   .donut-legend-row .lbl {
     display: flex;
-    align-items: center;
-    gap: 7px;
-    color: var(--ink-soft);
+    align-items: baseline;
+    gap: 6px;
+    color: var(--ink);
     font-weight: 600;
+    flex-wrap: wrap;
+  }
+
+  .donut-legend-row .lbl-sub {
+    font-weight: 400;
+    color: var(--ink-soft);
+    font-size: 11px;
   }
 
   .donut-legend-row .sw { width: 9px; height: 9px; border-radius: 50%; }
@@ -430,7 +386,7 @@
     .hero-inner { flex-direction: column; align-items: flex-start; }
     .hero-meta { text-align: left; }
     .kpi-strip { grid-template-columns: repeat(2, 1fr); }
-    .complexity-grid { grid-template-columns: 1fr; }
+    .complexity-layout { grid-template-columns: 1fr; }
     .epic-table { display: block; overflow-x: auto; }
   }
 </style>
@@ -597,36 +553,18 @@
   }
 
   function renderComplexity(mix) {
-    const total = mix.c1 + mix.c2 + mix.c3;
-    const pct = n => (n / total) * 100;
-
-    const rows = [
-      { cls: "green", name: "Cluster 1", sub: "Upload &amp; send", count: mix.c1, desc: "Documents created outside any tool and uploaded to DocuSign — a like-for-like swap into Ironclad. Wave 1, low effort." },
-      { cls: "amber", name: "Cluster 2", sub: "Reusable templates", count: mix.c2, desc: "Pre-built templates living inside DocuSign that need assessment and rebuilding in Ironclad. Wave 2, medium effort." },
-      { cls: "red",   name: "Cluster 3", sub: "Connected systems", count: mix.c3, desc: "Workflows integrated with Greenhouse, Workday, or other HRIS platforms. Subject to the technical roadmap — highest effort." },
-    ];
-
-    document.getElementById("complexity-grid").innerHTML = rows.map(r => `
-      <div class="cx-card">
-        <div class="cx-tag"><span class="sw ${r.cls}"></span>${r.name} — ${r.sub}</div>
-        <div class="cx-count">${r.count}</div>
-        <div class="cx-pct">${pct(r.count).toFixed(0)}% of clustered templates</div>
-        <div class="cx-desc">${r.desc}</div>
-      </div>
-    `).join("");
-
-    renderDonut(mix, total);
+    renderDonut(mix, mix.c1 + mix.c2 + mix.c3);
   }
 
   function renderDonut(mix, total) {
-    const colors = { c1: "var(--green)", c2: "var(--amber)", c3: "var(--red)" };
     const cx = 100, cy = 100, r = 70, strokeW = 26;
     const circumference = 2 * Math.PI * r;
 
+    const rootStyle = getComputedStyle(document.documentElement);
     const segments = [
-      { key: "c1", value: mix.c1, color: getComputedStyle(document.documentElement).getPropertyValue("--green").trim() },
-      { key: "c2", value: mix.c2, color: getComputedStyle(document.documentElement).getPropertyValue("--amber").trim() },
-      { key: "c3", value: mix.c3, color: getComputedStyle(document.documentElement).getPropertyValue("--red").trim() },
+      { key: "c1", value: mix.c1, color: rootStyle.getPropertyValue("--green").trim() },
+      { key: "c2", value: mix.c2, color: rootStyle.getPropertyValue("--amber").trim() },
+      { key: "c3", value: mix.c3, color: rootStyle.getPropertyValue("--red").trim() },
     ];
 
     let offset = 0;
@@ -648,13 +586,13 @@
     `;
 
     const legendRows = [
-      { cls: "green", label: "Cluster 1", val: mix.c1 },
-      { cls: "amber", label: "Cluster 2", val: mix.c2 },
-      { cls: "red",   label: "Cluster 3", val: mix.c3 },
+      { cls: "green", label: "Cluster 1", sub: "Upload &amp; send", val: mix.c1 },
+      { cls: "amber", label: "Cluster 2", sub: "Reusable templates", val: mix.c2 },
+      { cls: "red",   label: "Cluster 3", sub: "Connected systems", val: mix.c3 },
     ];
     document.getElementById("donut-legend").innerHTML = legendRows.map(r => `
       <div class="donut-legend-row">
-        <span class="lbl"><span class="sw ${r.cls}"></span>${r.label}</span>
+        <span class="lbl"><span class="sw ${r.cls}"></span>${r.label} <span class="lbl-sub">— ${r.sub}</span></span>
         <span class="val">${r.val} · ${((r.val/total)*100).toFixed(0)}%</span>
       </div>
     `).join("");
