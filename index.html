@@ -239,29 +239,116 @@
     line-height: 1.5;
   }
 
-  .stack-bar-wrap {
+  .complexity-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .donut-card {
     background: var(--paper-raised);
     border: 1px solid var(--line);
     border-radius: 10px;
-    padding: 18px 22px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
-  .stack-bar {
-    display: flex;
-    height: 12px;
-    border-radius: 6px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-  .stack-bar .seg.green { background: var(--green); }
-  .stack-bar .seg.amber { background: var(--amber); }
-  .stack-bar .seg.red { background: var(--red); }
+  .donut { width: 160px; height: 160px; margin-bottom: 16px; }
 
-  .stack-caption {
+  .donut-center-label {
+    font-size: 22px;
+    font-weight: 800;
+    fill: var(--hf-dark-green);
+  }
+  .donut-center-sub {
+    font-size: 8.5px;
+    fill: var(--ink-soft);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .donut-legend {
+    width: 100%;
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .donut-legend-row {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
+    font-size: 12.5px;
+  }
+
+  .donut-legend-row .lbl {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  .donut-legend-row .sw { width: 9px; height: 9px; border-radius: 50%; }
+  .donut-legend-row .sw.green { background: var(--green); }
+  .donut-legend-row .sw.amber { background: var(--amber); }
+  .donut-legend-row .sw.red { background: var(--red); }
+
+  .donut-legend-row .val { font-weight: 700; color: var(--ink); }
+
+  .market-card {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px;
+  }
+
+  .market-card-head {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 14px;
+  }
+
+  .market-row {
+    display: grid;
+    grid-template-columns: 148px 1fr 46px;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 0;
+  }
+
+  .market-name {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .market-bar {
+    display: flex;
+    height: 14px;
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--line);
+  }
+  .market-bar .seg.green { background: var(--green); }
+  .market-bar .seg.amber { background: var(--amber); }
+  .market-bar .seg.red { background: var(--red); }
+
+  .market-total {
     font-size: 11.5px;
     color: var(--ink-soft);
+    text-align: right;
+    font-weight: 600;
   }
 
   /* ============ EPIC TABLE ============ */
@@ -381,10 +468,15 @@
       <div class="section-note">297 templates clustered · 10 markets self-assessed</div>
     </div>
 
-    <div class="complexity-grid" id="complexity-grid"></div>
-    <div class="stack-bar-wrap">
-      <div class="stack-bar" id="stack-bar"></div>
-      <div class="stack-caption" id="stack-caption"></div>
+    <div class="complexity-layout">
+      <div class="donut-card">
+        <svg viewBox="0 0 200 200" class="donut" id="donut"></svg>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+      <div class="market-card">
+        <div class="market-card-head">By market — sorted by complexity mix</div>
+        <div id="market-rows"></div>
+      </div>
     </div>
   </div>
 
@@ -437,10 +529,29 @@
 
   // ---------------------------------------------------------------
   // COMPLEXITY MIX — pulled from the Global Template Inventory
-  // sheet's Summary tab (clustered templates only: 192 / 97 / 8)
+  // sheet's Summary tab, per-market cluster counts (clustered
+  // templates only — un-clustered/blank rows excluded)
   // ---------------------------------------------------------------
+  function loadMarkets() {
+    return [
+      { name: "HelloFresh SE / CH / DACH KG", c1: 38, c2: 0,  c3: 0 },
+      { name: "NA (US + Canada)",             c1: 27, c2: 36, c3: 8 },
+      { name: "ANZ",                          c1: 8,  c2: 51, c3: 0 },
+      { name: "Poland",                       c1: 21, c2: 0,  c3: 0 },
+      { name: "HelloConnect",                 c1: 38, c2: 0,  c3: 0 },
+      { name: "FR",                           c1: 26, c2: 1,  c3: 0 },
+      { name: "BNLX",                         c1: 19, c2: 6,  c3: 0 },
+      { name: "NORDICS",                      c1: 15, c2: 0,  c3: 0 },
+      { name: "UK & IE",                      c1: 0,  c2: 3,  c3: 0 },
+      { name: "DACH Production",              c1: 0,  c2: 0,  c3: 0 },
+    ];
+  }
+
   function loadComplexity() {
-    return { c1: 192, c2: 97, c3: 8 };
+    const markets = loadMarkets();
+    return markets.reduce((acc, m) => ({
+      c1: acc.c1 + m.c1, c2: acc.c2 + m.c2, c3: acc.c3 + m.c3
+    }), { c1: 0, c2: 0, c3: 0 });
   }
 
   const TODAY = new Date("2026-09-11");
@@ -504,14 +615,77 @@
       </div>
     `).join("");
 
-    document.getElementById("stack-bar").innerHTML = rows.map(r => `
-      <div class="seg ${r.cls}" style="width:${pct(r.count)}%"></div>
-    `).join("");
+    renderDonut(mix, total);
+  }
 
-    document.getElementById("stack-caption").innerHTML = `
-      <span>${total} templates clustered</span>
-      <span>${pct(mix.c1).toFixed(0)}% / ${pct(mix.c2).toFixed(0)}% / ${pct(mix.c3).toFixed(0)}%</span>
+  function renderDonut(mix, total) {
+    const colors = { c1: "var(--green)", c2: "var(--amber)", c3: "var(--red)" };
+    const cx = 100, cy = 100, r = 70, strokeW = 26;
+    const circumference = 2 * Math.PI * r;
+
+    const segments = [
+      { key: "c1", value: mix.c1, color: getComputedStyle(document.documentElement).getPropertyValue("--green").trim() },
+      { key: "c2", value: mix.c2, color: getComputedStyle(document.documentElement).getPropertyValue("--amber").trim() },
+      { key: "c3", value: mix.c3, color: getComputedStyle(document.documentElement).getPropertyValue("--red").trim() },
+    ];
+
+    let offset = 0;
+    const circles = segments.map(s => {
+      const frac = s.value / total;
+      const dash = frac * circumference;
+      const gap = circumference - dash;
+      const circle = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}"
+        stroke-width="${strokeW}" stroke-dasharray="${dash} ${gap}"
+        stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})" />`;
+      offset += dash;
+      return circle;
+    }).join("");
+
+    document.getElementById("donut").innerHTML = `
+      ${circles}
+      <text x="${cx}" y="${cy - 4}" text-anchor="middle" class="donut-center-label">${total}</text>
+      <text x="${cx}" y="${cy + 14}" text-anchor="middle" class="donut-center-sub">TEMPLATES</text>
     `;
+
+    const legendRows = [
+      { cls: "green", label: "Cluster 1", val: mix.c1 },
+      { cls: "amber", label: "Cluster 2", val: mix.c2 },
+      { cls: "red",   label: "Cluster 3", val: mix.c3 },
+    ];
+    document.getElementById("donut-legend").innerHTML = legendRows.map(r => `
+      <div class="donut-legend-row">
+        <span class="lbl"><span class="sw ${r.cls}"></span>${r.label}</span>
+        <span class="val">${r.val} · ${((r.val/total)*100).toFixed(0)}%</span>
+      </div>
+    `).join("");
+  }
+
+  function renderMarkets(markets) {
+    // Sort by "hardest mix first": weight c3 heaviest, then c2, then total
+    const withTotal = markets.map(m => ({
+      ...m,
+      total: m.c1 + m.c2 + m.c3,
+      weight: m.c3 * 100 + m.c2 * 10 + m.c1,
+    })).filter(m => m.total > 0);
+
+    withTotal.sort((a, b) => b.weight - a.weight);
+
+    document.getElementById("market-rows").innerHTML = withTotal.map(m => {
+      const p1 = (m.c1 / m.total) * 100;
+      const p2 = (m.c2 / m.total) * 100;
+      const p3 = (m.c3 / m.total) * 100;
+      return `
+        <div class="market-row">
+          <div class="market-name">${m.name}</div>
+          <div class="market-bar">
+            <div class="seg green" style="width:${p1}%"></div>
+            <div class="seg amber" style="width:${p2}%"></div>
+            <div class="seg red" style="width:${p3}%"></div>
+          </div>
+          <div class="market-total">${m.total}</div>
+        </div>
+      `;
+    }).join("");
   }
 
   function renderEpics(epics) {
@@ -541,8 +715,10 @@
   function render() {
     const epics = loadEpics();
     const mix = loadComplexity();
+    const markets = loadMarkets();
     renderKpis(epics);
     renderComplexity(mix);
+    renderMarkets(markets);
     renderEpics(epics);
     document.getElementById("pull-time").textContent = new Date().toLocaleDateString("en-US", {
       month: "short", day: "numeric", year: "numeric"
